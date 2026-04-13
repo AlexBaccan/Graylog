@@ -1,0 +1,61 @@
+
+services:
+  mongodb:
+    image: mongo:7.0
+    container_name: mongo
+    volumes:
+      - mongodb_data:/data/db
+      - mongodb_config:/data/configdb
+    networks:
+      - monitoring_net
+    restart: unless-stopped
+
+  graylog-datanode:
+    image: graylog/graylog-datanode:7.0.5
+    container_name: graylog-datanode
+    environment:
+      GRAYLOG_DATANODE_NODE_ID: "datanode-1"
+      GRAYLOG_DATANODE_PASSWORD_SECRET: "unacontrasenacualquiera"
+      GRAYLOG_DATANODE_ROOT_PASSWORD_SHA2: "68acd3a1889c7dce2dfc9fa8679ab619b8b704366568ebfb2d44a8743c68e062"
+      GRAYLOG_DATANODE_MONGODB_URI: "mongodb://mongodb:27017/graylog"
+    volumes:
+      - datanode_data:/var/lib/graylog-datanode
+    ports:
+      - "8999:8999"
+    networks:
+      - monitoring_net
+    restart: unless-stopped
+
+  graylog:
+    image: graylog/graylog:7.0.5
+    container_name: graylog
+    depends_on:
+      - mongodb
+      - graylog-datanode
+    environment:
+      GRAYLOG_PASSWORD_SECRET: "unacontrasenacualquiera"
+      GRAYLOG_ROOT_PASSWORD_SHA2: "68acd3a1889c7dce2dfc9fa8679ab619b8b704366568ebfb2d44a8743c68e062"
+      GRAYLOG_HTTP_EXTERNAL_URI: "http://localhost:9000/"
+      GRAYLOG_DATANODE_ENABLED: "true"
+      GRAYLOG_DATANODE_URI: "http://graylog-datanode:8999/"
+    ports:
+      - "9000:9000"
+      - "5140:5140/udp"
+      - "5140:5140/tcp"
+    volumes:
+      - graylog_data:/usr/share/graylog/data
+      - graylog_scripts:/opt/graylog/scripts
+    networks:
+      - monitoring_net
+    restart: unless-stopped
+
+networks:
+  monitoring_net:
+    external: true
+
+volumes:
+  mongodb_data:
+  mongodb_config:
+  datanode_data:
+  graylog_data:
+  graylog_scripts:
